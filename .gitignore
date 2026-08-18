@@ -1,0 +1,4 @@
+bin/
+obj/
+.last_dir
+libft_tester
