@@ -90,19 +90,35 @@ static void	print_menu(char **tests, int count, int page_start)
 
 static int	run_test(const char *name)
 {
-	char	path[512];
-	int		status;
-	pid_t	pid;
+    char		path[512];
+    char		output_path[] = "/tmp/libft_test_XXXXXX";
+    char		output[65536];
+    char		*passed_marker;
+    int		output_fd;
+    ssize_t	bytes_read;
+    ssize_t	total_read;
+    int		status;
+    pid_t	pid;
 
 	snprintf(path, sizeof(path), "%s/%s", TEST_DIR, name);
+    output_fd = mkstemp(output_path);
+    if (output_fd < 0)
+    {
+        perror("mkstemp");
+        return (0);
+    }
 	pid = fork();
 	if (pid < 0)
 	{
 		perror("fork");
+        close(output_fd);
+        unlink(output_path);
 		return (0);
 	}
 	if (pid == 0)
 	{
+        dup2(output_fd, STDOUT_FILENO);
+        close(output_fd);
 		execl(path, name, (char *)NULL);
 		perror(path);
 		_exit(127);
@@ -110,30 +126,88 @@ static int	run_test(const char *name)
 	if (waitpid(pid, &status, 0) < 0)
 	{
 		perror("waitpid");
+        close(output_fd);
+        unlink(output_path);
 		return (0);
 	}
-	return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    lseek(output_fd, 0, SEEK_SET);
+    total_read = 0;
+    while (total_read < (ssize_t)sizeof(output) - 1)
+    {
+        bytes_read = read(output_fd, output + total_read,
+            sizeof(output) - 1 - total_read);
+        if (bytes_read <= 0)
+            break ;
+        total_read += bytes_read;
+    }
+    output[total_read] = '\0';
+    write(STDOUT_FILENO, output, total_read);
+    passed_marker = strstr(output, "All tests passed!");
+    close(output_fd);
+    unlink(output_path);
+    return (WIFEXITED(status) && passed_marker != NULL);
+}
+
+static void	print_summary(char **failed_tests, int failed_count)
+{
+    int	i;
+
+    if (failed_count == 0)
+    {
+        printf("\n");
+        printf("\033[1;35m╔══════════════════════════════════════════╗\033[0m\n");
+        printf("\033[1;35m║\033[0m       \033[1;33m✨ CONGRATULATIONS! ✨\033[0m             \033[1;35m║\033[0m\n");
+        printf("\033[1;35m║\033[0m    \033[1;32mEvery test passed successfully!\033[0m       \033[1;35m║\033[0m\n");
+        printf("\033[1;35m║\033[0m       \033[1;36mYour libft is flawless! 🚀\033[0m         \033[1;35m║\033[0m\n");
+        printf("\033[1;35m╚══════════════════════════════════════════╝\033[0m\n");
+        return ;
+    }
+    printf("\n");
+    i = 0;
+    while (i < failed_count)
+    {
+        if (i > 0)
+            printf(" and ");
+        printf("%s.c", failed_tests[i]);
+        i++;
+    }
+    printf(" failed some tests! please check them!\n");
 }
 
 static int	run_group(char **tests, int count, int bonus)
 {
-	int	i;
-	int	run;
-	int	passed;
+    char	*failed_tests[MAX_TESTS];
+    int	i;
+    int	run;
+    int	failed_count;
 
-	passed = 0;
+    failed_count = 0;
 	i = 0;
 	while (i < count)
 	{
 		if (is_bonus(tests[i]) == bonus)
 		{
 			run = run_test(tests[i]);
-			if (run)
-				passed++;
+            if (!run)
+                failed_tests[failed_count++] = tests[i];
 		}
 		i++;
 	}
-	return (passed);
+    print_summary(failed_tests, failed_count);
+    return (failed_count == 0);
+}
+
+static void	run_single_test(const char *name)
+{
+    char	*failed_tests[1];
+
+    if (run_test(name))
+        print_summary(failed_tests, 0);
+    else
+    {
+        failed_tests[0] = (char *)name;
+        print_summary(failed_tests, 1);
+    }
 }
 
 static void	print_list(char **tests, int count)
@@ -168,13 +242,13 @@ int main(int argc, char **argv)
     int     found;
     int     wrong_attempts;
     int     page_start;
+    size_t  len;
 
     count = load_tests(tests);
     qsort(tests, count, sizeof(*tests), cmp_tests);
     if (count == 0)
     {
-        printf("No testers were built.\n");
-        printf("Run: make tests\n");
+        printf(";)\n");
         return (1);
     }
 
@@ -183,12 +257,21 @@ int main(int argc, char **argv)
     /* ========================================= */
     if (argc > 1)
     {
-        if (strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "all") == 0)
+        char arg_test[128];
+        
+        /* Copy the argument safely and check for .c */
+        strncpy(arg_test, argv[1], sizeof(arg_test) - 1);
+        arg_test[127] = '\0';
+        len = strlen(arg_test);
+        if (len > 2 && strcmp(arg_test + len - 2, ".c") == 0)
+            arg_test[len - 2] = '\0'; /* Strip the .c */
+
+        if (strcmp(arg_test, "-a") == 0 || strcmp(arg_test, "all") == 0)
         {
-            printf("\n\033[1;34m--- TESTING ALL ---\033[0m\n");
+            printf("\n\033[1;34m--- mandatory ---\033[0m\n");
             run_group(tests, count, 0);
         }
-        else if (strcmp(argv[1], "-b") == 0 || strcmp(argv[1], "bonus") == 0)
+        else if (strcmp(arg_test, "-b") == 0 || strcmp(arg_test, "bonus") == 0)
         {
             printf("\n\033[1;34m--- bonus ---\033[0m\n");
             run_group(tests, count, 1);
@@ -199,10 +282,10 @@ int main(int argc, char **argv)
             i = 0;
             while (i < count)
             {
-                if (strcmp(argv[1], tests[i]) == 0
-                    || (strncmp(argv[1], "ft_", 3) == 0 && strcmp(argv[1], tests[i]) == 0))
+                if (strcmp(arg_test, tests[i]) == 0
+                    || (strncmp(arg_test, "ft_", 3) == 0 && strcmp(arg_test, tests[i]) == 0))
                 {
-                    run_test(tests[i]);
+                    run_single_test(tests[i]);
                     found = 1;
                     break;
                 }
@@ -234,7 +317,15 @@ int main(int argc, char **argv)
         }
         if (!fgets(input, sizeof(input), stdin))
             break ;
+        
+        /* Clean newline */
         input[strcspn(input, "\n")] = '\0';
+        
+        /* Strip .c if the user typed it in the interactive prompt */
+        len = strlen(input);
+        if (len > 2 && strcmp(input + len - 2, ".c") == 0)
+            input[len - 2] = '\0';
+
         if (strcmp(input, "exit") == 0 || strcmp(input, "q") == 0)
             break ;
         if (strcmp(input, "n") == 0)
@@ -270,7 +361,7 @@ int main(int argc, char **argv)
         if (strcmp(input, "all") == 0)
         {
             clear_screen();
-            printf("\n\033[1;34m--- TESTING ALL ---\033[0m\n");
+            printf("\n\033[1;34m--- mandatory ---\033[0m\n");
             run_group(tests, count, 0);
             wait_for_continue();
             wrong_attempts = 0;
@@ -295,7 +386,7 @@ int main(int argc, char **argv)
             {
                 found = 1;
                 clear_screen();
-                run_test(tests[i]);
+                run_single_test(tests[i]);
                 wait_for_continue();
                 wrong_attempts = 0;
                 break ;
@@ -308,7 +399,7 @@ int main(int argc, char **argv)
             if (test_num > 0 && test_num <= count)
             {
                 clear_screen();
-                run_test(tests[test_num - 1]);
+                run_single_test(tests[test_num - 1]);
                 wait_for_continue();
                 wrong_attempts = 0;
             }
