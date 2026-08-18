@@ -50,6 +50,3 @@ cd "$TESTER_DIR" || exit 1
 
 # Finally, return the user to their original directory when done
 cd "$USER_DIR" || exit 1
-
-# 4. EXECUTE: Run the main tester executable
-"$TESTER_DIR/libft_tester"

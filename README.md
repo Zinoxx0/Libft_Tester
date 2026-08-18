@@ -2,7 +2,7 @@
 
 A small, terminal-friendly test bench for the **42 libft project**.
 
-This tester was made to make the first round of libft debugging less repetitive: point it at your project, let it compile the files it finds, then run one function, a whole group, or everything from a simple menu.
+This tester was built to make the first round of libft debugging less repetitive: point it at your project, let it compile the files it finds, then run one function, an entire group, or everything from a simple menu.
 
 > Made for the 42 community by **samercad** (42 Intra).
 
@@ -33,15 +33,15 @@ Make the launcher executable:
 chmod +x ~/Libft_Tester/libt.sh
 ```
 
-Create the `libt` alias. Use the file for the shell you normally use:
+Create the `libt` alias for your shell:
 
 ```sh
 # bash
-printf "alias libt='bash \"$HOME/Libft_Tester/libt.sh\"'\n" >> ~/.bashrc
+alias libt='bash \"$HOME/Libft_Tester/libt.sh\"' >> ~/.bashrc
 source ~/.bashrc
 
 # zsh
-printf "alias libt='bash \"$HOME/Libft_Tester/libt.sh\"'\n" >> ~/.zshrc
+alias libt='bash \"$HOME/Libft_Tester/libt.sh\"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -53,7 +53,7 @@ Go to the directory containing your libft source files, then run:
 libt
 ```
 
-You can also skip the menu and run a command directly:
+You can also skip the menu and run a specific test or group directly:
 
 ```sh
 libt ft_strlen.c
@@ -70,7 +70,7 @@ A test is available when both of these exist:
 
 ## Before you start
 
-launching `libt`; the launcher scans only the current directory, not nested folders.
+When launching `libt`, the launcher scans only the current directory, not nested folders.
 
 The tester expects a Unix-like environment with:
 
