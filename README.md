@@ -36,7 +36,7 @@ chmod +x ~/Libft_Tester/libt.sh
 Create the `libt` alias for your shell:
 
 ```sh
-alias libt='~/libft_tester/libt.sh'
+alias libt='~/Libft_Tester/libt.sh'
 ```
 
 ## Basic use
