@@ -323,9 +323,11 @@ int main(int argc, char **argv)
             {
                 clear_screen();
                 printf("\033[1;31mThis is the last page already!!!\033[0m\n");
+                wrong_attempts = 0;
                 continue ;
             }
             clear_screen();
+            wrong_attempts = 0;
             continue ;
         }
         if (strcmp(input, "b") == 0)
@@ -335,6 +337,7 @@ int main(int argc, char **argv)
                 printf("\033[1;31mThis is the first page!!!\033[0m\n");
             else
                 page_start -= PAGE_SIZE;
+            wrong_attempts = 0;
             continue ;
         }
         if (strcmp(input, "list") == 0)
