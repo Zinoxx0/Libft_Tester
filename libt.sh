@@ -4,7 +4,7 @@
 TESTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 USER_DIR="$PWD"
 
-# 1. SMART CHECK: Look for .c files in the current user directory
+# Look for .c files in the current user directory
 # We use nullglob so that if no files exist, the array is truly empty instead of containing "*.c"
 shopt -s nullglob
 SRC_FILES=("$USER_DIR"/*.c)
@@ -16,7 +16,7 @@ if [ ${#SRC_FILES[@]} -eq 0 ]; then
     exit 1
 fi
 
-# 2. CACHE CHECK: Avoid cross-project contamination
+# CACHE CHECK: Avoid cross-project contamination
 CACHE_FILE="$TESTER_DIR/.last_dir"
 
 if [ -f "$CACHE_FILE" ]; then
@@ -33,7 +33,7 @@ echo "$USER_DIR" > "$CACHE_FILE"
 echo "⚙️  Compiling libft_tester against: $USER_DIR"
 echo "--------------------------------------------------"
 
-# 3. COMPILE: Run make and stop if there's a compilation error
+# Run make and stop if there's a compilation error
 if ! make -C "$TESTER_DIR" SRC_DIR="$USER_DIR" all; then
     echo "--------------------------------------------------"
     echo "❌ Compilation failed. Please fix your errors and try again."
@@ -44,9 +44,9 @@ echo "--------------------------------------------------"
 echo "🚀 Running tester..."
 echo ""
 
-# 4. EXECUTE: Move into the tester's directory so it can find 'tests/bin/'
+# Move into the tester's directory so it can find 'tests/bin/'
 cd "$TESTER_DIR" || exit 1
 ./libft_tester "$@"
 
-# Finally, return the user to their original directory when done
+# return the user to their original directory when done
 cd "$USER_DIR" || exit 1
