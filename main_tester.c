@@ -14,10 +14,7 @@ static void	clear_screen(void)
 	system("clear");
 }
 
-static int	is_bonus(const char *name)
-{
-	return (strncmp(name, "ft_lst", 6) == 0);
-}
+
 
 static int	load_tests(char **tests)
 {
@@ -67,8 +64,7 @@ static void	print_menu(char **tests, int count, int page_start)
 
 	printf("\n");
 	printf("\033[1;32m========== Libft Tester by Samercad! ==========\033[0m\n");
-	printf("  \033[1;33mall\033[0m        - run all available mandatory tests\n");
-	printf("  \033[1;33mbonus\033[0m      - run all available bonus tests\n");
+	printf("  \033[1;33mall\033[0m        - run all available tests\n");
 	printf("  \033[1;33mlist\033[0m       - list available tests\n");
 	printf("  \033[1;33mexit\033[0m       - quit\n");
 	printf("\n\033[1;34mAvailable tests:\033[0m\n");
@@ -78,8 +74,7 @@ static void	print_menu(char **tests, int count, int page_start)
 	i = page_start;
 	while (i < page_end)
 	{
-		printf("  [\033[1;33m%2d\033[0m] %s%s\n", i + 1, tests[i],
-			is_bonus(tests[i]) ? "  [bonus]" : "");
+		printf("  [\033[1;33m%2d\033[0m] %s\n", i + 1, tests[i]);
 		i++;
 	}
 	printf("\n  \033[1;33mn\033[0m - next page  |  \033[1;33mb\033[0m - previous page\n");
@@ -174,7 +169,7 @@ static void	print_summary(char **failed_tests, int failed_count)
     printf(" failed some tests! please check them!\n");
 }
 
-static int	run_group(char **tests, int count, int bonus)
+static int	run_group(char **tests, int count)
 {
     char	*failed_tests[MAX_TESTS];
     int	i;
@@ -185,12 +180,9 @@ static int	run_group(char **tests, int count, int bonus)
 	i = 0;
 	while (i < count)
 	{
-		if (is_bonus(tests[i]) == bonus)
-		{
-			run = run_test(tests[i]);
-            if (!run)
-                failed_tests[failed_count++] = tests[i];
-		}
+		run = run_test(tests[i]);
+        if (!run)
+            failed_tests[failed_count++] = tests[i];
 		i++;
 	}
     print_summary(failed_tests, failed_count);
@@ -218,7 +210,7 @@ static void	print_list(char **tests, int count)
 	i = 0;
 	while (i < count)
 	{
-		printf("  %-24s%s\n", tests[i], is_bonus(tests[i]) ? "[bonus]" : "");
+		printf("  %-24s\n", tests[i]);
 		i++;
 	}
 }
@@ -268,13 +260,8 @@ int main(int argc, char **argv)
 
         if (strcmp(arg_test, "-a") == 0 || strcmp(arg_test, "all") == 0)
         {
-            printf("\n\033[1;34m--- mandatory ---\033[0m\n");
-            run_group(tests, count, 0);
-        }
-        else if (strcmp(arg_test, "-b") == 0 || strcmp(arg_test, "bonus") == 0)
-        {
-            printf("\n\033[1;34m--- bonus ---\033[0m\n");
-            run_group(tests, count, 1);
+            printf("\n\033[1;34m--- Running all tests ---\033[0m\n");
+            run_group(tests, count);
         }
         else
         {
@@ -361,17 +348,8 @@ int main(int argc, char **argv)
         if (strcmp(input, "all") == 0)
         {
             clear_screen();
-            printf("\n\033[1;34m--- mandatory ---\033[0m\n");
-            run_group(tests, count, 0);
-            wait_for_continue();
-            wrong_attempts = 0;
-            continue ;
-        }
-        if (strcmp(input, "bonus") == 0)
-        {
-            clear_screen();
-            printf("\n\033[1;34m--- bonus ---\033[0m\n");
-            run_group(tests, count, 1);
+            printf("\n\033[1;34m--- Running all tests ---\033[0m\n");
+            run_group(tests, count);
             wait_for_continue();
             wrong_attempts = 0;
             continue ;

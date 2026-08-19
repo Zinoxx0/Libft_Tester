@@ -58,7 +58,6 @@ You can also skip the menu and run a specific test or group directly:
 ```sh
 libt ft_strlen.c
 libt -a "for all files available"
-libt -b "only for files that are consided as bonus"
 ```
 
 ## What counts as a test?
