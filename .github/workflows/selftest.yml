@@ -1,0 +1,15 @@
+# Runs `make selftest` (see selftest/run.sh) on every push and pull request,
+# with gcc and clang.
+name: selftest
+
+on: [push, pull_request]
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - run: make selftest CC=${{ matrix.cc }}

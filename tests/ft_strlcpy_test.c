@@ -63,7 +63,8 @@ static void	long_src(void)
 
 static void	every_size(void)
 {
-	const char	*sources[] = {"", "a", "abc", "hello world", "0123456789abcdef"};
+	const char	*sources[] = {"", "a", "abc", "hello world",
+		"0123456789abcdef"};
 	size_t		i;
 	size_t		size;
 

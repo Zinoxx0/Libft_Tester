@@ -63,15 +63,17 @@ Every function is compared with the subject and with the real libc (or the BSD b
 ## How it is organised
 
 ```
-libt.sh              launcher: builds the tests against your directory, then runs them
-Makefile             builds the runner, your objects, and one test binary per function
-runner.c             menu and command line; runs the test binaries
-framework/tester.[ch]  checks, process isolation, malloc tracking, guarded buffers, fd capture
-tests/ft_*_test.c    one test program per function
-tests/lists.h        list helpers shared by the Part 3 tests
+libt.sh        launcher: builds everything against your directory, then starts the runner
+Makefile       builds the runner, the framework, your objects and one test binary per function
+runner/        the menu and command line; runs the test binaries
+framework/     what the tests are built on: checks, process isolation, malloc tracking...
+tests/         one test program per function (ft_name_test.c)
+selftest/      tests for the tester itself: make selftest
 ```
 
-Adding a test means writing `tests/ft_name_test.c` (copy one of the existing files: a list of `test("title", function)` cases, each using `doing(...)` and `check_*()` from `framework/tester.h`), then adding the name to the table at the top of `runner.c`.
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md) explains all of it in detail: read it if you want to understand the tester or change it.
+
+Adding a test means writing `tests/ft_name_test.c` (copy an existing one), then adding the function to the table in `runner/functions.c`. Run `make selftest` before you push: it compiles every test with `-Werror` and checks the framework still catches what it should. GitHub runs it too, on every push.
 
 Have fun, read the failures carefully, and remember: every tiny function is one more brick in your libft.
 

@@ -1,0 +1,76 @@
+
+ 🧪 framework
+
+  ⚠ prototype differs from the subject: int sample(const char *)
+  ✓ checks that pass
+  ✗ checks that fail
+      comparing different values
+        a generic message
+        int: expected 4, got -4
+        size: expected 5, got 4
+        bool: expected true (non-zero), got 0
+        sign: expected a negative value, got 0
+        str: expected NULL, got "abc\n"
+  ✗ more checks that fail, past the display limit
+      more different values
+        mem: expected "a\0c", got "a\0b"
+        ptr: expected s + 2, got NULL
+        ptr: expected s + 2, got s + 1
+        'a' '\n' EOF 300
+        "\xff\t\""
+        NULL
+      ... and 2 more
+  ✗ a crash — crashed: Segmentation fault
+      while running dereferencing NULL
+  ✗ an infinite loop — timed out after 1 s (infinite loop?)
+      while running looping forever
+  ✗ a call to exit() — exited with status 3 (calls exit()?)
+  ✗ a leak
+      leaked 6 bytes in 1 block:
+        6 bytes: "hello\0"
+  ✗ a missing +1
+      wrote a '\0' right after the end of a 5-byte malloc block: forgot the +1?
+  ✗ an overflow
+      wrote past the end of a 5-byte malloc block
+  ✗ a double free
+      double free of a 5-byte block
+  ✗ frees of pointers malloc never returned
+      free() of a pointer malloc never returned
+      free() of a pointer into the middle of a 8-byte block
+  ✓ fresh blocks are filled with garbage
+  ✗ block sizes
+      ⚠ bigger: malloc'd 10 bytes, 4 would be enough
+      smaller: malloc'd 10 bytes, needs 12
+      stack wasn't allocated with malloc
+      inside points into the middle of a malloc block, it can't be freed on its own
+  ✓ guarded buffers, in bounds
+  ✗ reading past a guarded buffer — crashed: Segmentation fault
+      while running reading one byte past a guarded string
+  ✗ reading before a guarded buffer — crashed: Segmentation fault
+      while running reading one byte before a guarded string
+  ✓ malloc failures, handled
+  ✗ malloc failures, leaking
+      leaky() with malloc #3 of 3 failing
+        leaked 2 bytes after the failure
+  ✗ malloc failures, not checked — crashed: Segmentation fault
+      while running reckless() with malloc #1 of 1 failing
+  ✓ output to the fd
+  ✗ output to stdout instead
+      wrote "oops\n" to stdout instead of the fd it was given
+
+  5/21 cases passed
+  ✗ framework          5/21 cases passed
+      ⚠ prototype differs from the subject: int sample(const char *)
+      ✗ checks that fail
+          comparing different values
+            a generic message
+            int: expected 4, got -4
+          ... and 4 more
+      ✗ more checks that fail, past the display limit
+          more different values
+            mem: expected "a\0c", got "a\0b"
+            ptr: expected s + 2, got NULL
+          ... and 6 more
+      ✗ a crash — crashed: Segmentation fault
+          while running dereferencing NULL
+      ... and 13 more failing cases

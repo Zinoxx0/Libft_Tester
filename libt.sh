@@ -37,22 +37,6 @@ if [[ $USER_DIR == *[[:space:]]* ]]; then
 	exit 1
 fi
 
-# make only compares dates: a file put back with an older date (mv, cp -p,
-# a backup) would keep its stale object, so content changes drop objects too.
-build="$TESTER_DIR/build"
-sums="$(cd "$USER_DIR" && cksum ./*.c ./*.h 2> /dev/null)"
-if [ -f "$build/sources.sum" ]; then
-	for file in $(diff <(echo "$sums") "$build/sources.sum" \
-			| sed -n 's|^< [0-9]* [0-9]* \./||p'); do
-		case "$file" in
-			*.h) rm -rf "$build/obj" "$build/tests" ;;
-			*.c) rm -f "$build/obj/${file%.c}.o" ;;
-		esac
-	done
-fi
-mkdir -p "$build"
-echo "$sums" > "$build/sources.sum"
-
 jobs="$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)"
 echo "⚙️  Building the tests for $USER_DIR"
 if ! make -s -j"$jobs" -C "$TESTER_DIR" SRC_DIR="$USER_DIR" "${make_args[@]}"; then
@@ -60,5 +44,5 @@ if ! make -s -j"$jobs" -C "$TESTER_DIR" SRC_DIR="$USER_DIR" "${make_args[@]}"; t
 	exit 1
 fi
 
-LIBT_SRC="$USER_DIR" LIBT_BUILD="$build" \
+LIBT_SRC="$USER_DIR" LIBT_BUILD="$TESTER_DIR/build" \
 	exec "$TESTER_DIR/build/runner" "${args[@]}"

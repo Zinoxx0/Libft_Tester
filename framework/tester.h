@@ -74,7 +74,6 @@ void		warn(const char *fmt, ...)
 void		*tester_malloc(size_t size);
 void		tester_free(void *ptr);
 int			check_alloc(const void *p, size_t need, const char *what);
-size_t		live_blocks(void);
 
 /*
 ** Calls fn(arg) once to count its mallocs, then once more for each of them

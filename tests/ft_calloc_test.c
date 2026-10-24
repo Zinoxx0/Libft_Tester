@@ -55,8 +55,7 @@ static void	zero_size(void)
 static void	overflow(void)
 {
 	const size_t	args[][2] = {{SIZE_MAX, 2}, {2, SIZE_MAX},
-	{SIZE_MAX / 2 + 2, 2}, {SIZE_MAX, SIZE_MAX}, {(size_t)1 << 33,
-		(size_t)1 << 32}};
+	{SIZE_MAX / 2 + 2, 2}, {SIZE_MAX, SIZE_MAX}, {SIZE_MAX / 4 + 1, 4}};
 	size_t			i;
 	void			*p;
 
