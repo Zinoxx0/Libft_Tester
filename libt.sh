@@ -1,52 +1,64 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# libt: builds the tests against the libft in the current directory, then
+# runs them. Arguments go to the runner (see libt -h), except --asan.
 
-# Find out exactly where this script lives
-TESTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+# Where the tester lives, even when this script is reached through a symlink
+script="${BASH_SOURCE[0]}"
+while [ -L "$script" ]; do
+	dir="$(cd -P "$(dirname "$script")" && pwd)"
+	script="$(readlink "$script")"
+	[[ $script == /* ]] || script="$dir/$script"
+done
+TESTER_DIR="$(cd -P "$(dirname "$script")" && pwd)"
 USER_DIR="$PWD"
 
-# Look for .c files in the current user directory
-# We use nullglob so that if no files exist, the array is truly empty instead of containing "*.c"
+args=()
+make_args=()
+for arg in "$@"; do
+	if [ "$arg" = "--asan" ]; then
+		make_args+=(SANITIZE=1)
+		export ASAN_OPTIONS="detect_leaks=0:exitcode=86"
+		export UBSAN_OPTIONS="print_stacktrace=1:exitcode=86"
+	else
+		args+=("$arg")
+	fi
+done
+
 shopt -s nullglob
-SRC_FILES=("$USER_DIR"/*.c)
+sources=("$USER_DIR"/ft_*.c)
 shopt -u nullglob
-
-if [ ${#SRC_FILES[@]} -eq 0 ]; then
-    echo "❌ Error: No .c files found in $USER_DIR"
-    echo "💡 Please navigate to your libft project folder and run 'libt' from there."
-    exit 1
+if [ ${#sources[@]} -eq 0 ]; then
+	echo "❌ No ft_*.c files in $USER_DIR"
+	echo "💡 Run libt from your libft directory."
+	exit 1
+fi
+if [[ $USER_DIR == *[[:space:]]* ]]; then
+	echo "❌ make can't handle spaces in paths: $USER_DIR"
+	exit 1
 fi
 
-# CACHE CHECK: Avoid cross-project contamination
-CACHE_FILE="$TESTER_DIR/.last_dir"
+# make only compares dates: a file put back with an older date (mv, cp -p,
+# a backup) would keep its stale object, so content changes drop objects too.
+build="$TESTER_DIR/build"
+sums="$(cd "$USER_DIR" && cksum ./*.c ./*.h 2> /dev/null)"
+if [ -f "$build/sources.sum" ]; then
+	for file in $(diff <(echo "$sums") "$build/sources.sum" \
+			| sed -n 's|^< [0-9]* [0-9]* \./||p'); do
+		case "$file" in
+			*.h) rm -rf "$build/obj" "$build/tests" ;;
+			*.c) rm -f "$build/obj/${file%.c}.o" ;;
+		esac
+	done
+fi
+mkdir -p "$build"
+echo "$sums" > "$build/sources.sum"
 
-if [ -f "$CACHE_FILE" ]; then
-    LAST_DIR=$(cat "$CACHE_FILE")
-    if [ "$LAST_DIR" != "$USER_DIR" ]; then
-        echo "🧹 Switched to a new directory. Cleaning old tester cache..."
-        make -C "$TESTER_DIR" clean >/dev/null
-    fi
+jobs="$(getconf _NPROCESSORS_ONLN 2> /dev/null || echo 4)"
+echo "⚙️  Building the tests for $USER_DIR"
+if ! make -s -j"$jobs" -C "$TESTER_DIR" SRC_DIR="$USER_DIR" "${make_args[@]}"; then
+	echo "❌ The tester itself failed to build."
+	exit 1
 fi
 
-# Save the current directory for next time
-echo "$USER_DIR" > "$CACHE_FILE"
-
-echo "⚙️  Compiling libft_tester against: $USER_DIR"
-echo "--------------------------------------------------"
-
-# Run make and stop if there's a compilation error
-if ! make -C "$TESTER_DIR" SRC_DIR="$USER_DIR" all; then
-    echo "--------------------------------------------------"
-    echo "❌ Compilation failed. Please fix your errors and try again."
-    exit 1
-fi
-
-echo "--------------------------------------------------"
-echo "🚀 Running tester..."
-echo ""
-
-# Move into the tester's directory so it can find 'tests/bin/'
-cd "$TESTER_DIR" || exit 1
-./libft_tester "$@"
-
-# return the user to their original directory when done
-cd "$USER_DIR" || exit 1
+LIBT_SRC="$USER_DIR" LIBT_BUILD="$build" \
+	exec "$TESTER_DIR/build/runner" "${args[@]}"

@@ -1,59 +1,79 @@
-NAME        := libft_tester
-CC          := cc
-CFLAGS      := -Wall -Wextra -Werror -g
+# Builds the runner and one test binary per libft function found in SRC_DIR.
+# Normally driven by libt.sh. By hand: make SRC_DIR=/path/to/libft [SANITIZE=1]
 
-# The '?=' allows this to be overridden by the command line (e.g., SRC_DIR=$PWD)
-SRC_DIR     ?= src
+SRC_DIR		?= .
+CC			:= cc
+CFLAGS		:= -Wall -Wextra -Werror -g
+# Every malloc/free in the libft sources and in the tests goes through the
+# framework, which checks for leaks, overflows and bad frees.
+TRACK		:= -Dmalloc=tester_malloc -Dfree=tester_free
 
-TEST_DIR    := tests
-BIN_DIR     := $(TEST_DIR)/bin
-OBJ_DIR     := $(TEST_DIR)/obj
+ifeq ($(SANITIZE),1)
+CFLAGS		+= -fsanitize=address,undefined -fno-sanitize-recover=all \
+			   -fno-omit-frame-pointer
+endif
 
-# Get all .c files from the target directory
-SRC         := $(wildcard $(SRC_DIR)/*.c)
+BUILD		:= build
+OBJ_DIR		:= $(BUILD)/obj
+TEST_DIR	:= $(BUILD)/tests
+BIN_DIR		:= $(BUILD)/bin
+LOG_DIR		:= $(BUILD)/log
+LIB			:= $(BUILD)/libft.a
+FRAMEWORK	:= $(BUILD)/tester.o
+RUNNER		:= $(BUILD)/runner
 
-# Strip the path so we just have "ft_split.c", "ft_itoa.c", etc.
-SRC_FILES   := $(notdir $(SRC))
+SRCS		:= $(wildcard $(SRC_DIR)/*.c)
+OBJS		:= $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
+TESTS		:= $(patsubst tests/%_test.c,%,$(wildcard tests/*_test.c))
+FOUND		:= $(filter $(TESTS),$(basename $(notdir $(SRCS))))
+BINS		:= $(addprefix $(BIN_DIR)/,$(FOUND))
 
-# Map them to our local object directory: tests/obj/ft_split.o
-OBJ         := $(addprefix $(OBJ_DIR)/, $(SRC_FILES:.c=.o))
+# Everything is rebuilt when the libft directory or the flags change.
+CONFIG		:= $(BUILD)/config
+SETTINGS	:= $(abspath $(SRC_DIR)) $(CC) $(CFLAGS)
+$(shell mkdir -p $(OBJ_DIR) $(TEST_DIR) $(BIN_DIR) $(LOG_DIR); \
+	echo '$(SETTINGS)' | cmp -s - $(CONFIG) || echo '$(SETTINGS)' > $(CONFIG))
 
-TEST_SRC    := $(wildcard $(TEST_DIR)/*_tester.c)
-TEST_NAMES  := $(patsubst $(TEST_DIR)/%_tester.c,%,$(TEST_SRC))
+RED			:= \033[31m
+RESET		:= \033[0m
 
-VALID_NAMES := $(foreach t,$(TEST_NAMES),$(if $(wildcard $(SRC_DIR)/$(t).c),$(t)))
-TEST_BINS   := $(addprefix $(BIN_DIR)/,$(VALID_NAMES))
+.PHONY: all clean re
+.SECONDARY:
 
-.PHONY: all clean fclean re tests list
+all: $(RUNNER) $(BINS)
 
-all: $(NAME) tests
+$(RUNNER): runner.c $(CONFIG)
+	@$(CC) $(CFLAGS) $< -o $@
 
-$(NAME): main_tester.c
-	@$(CC) $(CFLAGS) -o $@ $<
+$(FRAMEWORK): framework/tester.c framework/tester.h $(CONFIG)
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-tests: $(TEST_BINS)
+# A libft file that doesn't compile is reported and left out, so the other
+# functions can still be tested. The runner shows the errors from the log.
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(CONFIG)
+	@$(CC) $(CFLAGS) $(TRACK) -MMD -MP -I$(SRC_DIR) -c $< -o $@ \
+		2> $(LOG_DIR)/$*.c.log \
+		|| { rm -f $@; printf "  $(RED)✗$(RESET) %s doesn't compile\n" $*.c; }
 
-# Create both bin and obj directories
-$(BIN_DIR) $(OBJ_DIR):
-	@mkdir -p $@
+$(LIB): $(OBJS)
+	@rm -f $@
+	@objs="$$(ls $(OBJS) 2> /dev/null)"; [ -z "$$objs" ] || ar rcs $@ $$objs
 
-# Compile the user's source files into our local OBJ_DIR
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	@printf "  CC  %-24s\n" "$@"
-	@$(CC) $(CFLAGS) -I$(SRC_DIR) -c $< -o $@
+$(TEST_DIR)/%.o: tests/%_test.c $(CONFIG)
+	@$(CC) $(CFLAGS) $(TRACK) -MMD -MP -Iframework -I$(SRC_DIR) -c $< -o $@ \
+		2> $(LOG_DIR)/$*.test.log \
+		|| { rm -f $@; printf "  $(RED)✗$(RESET) the %s test doesn't compile with your libft.h\n" $*; }
 
-$(BIN_DIR)/%: $(TEST_DIR)/%_tester.c $(OBJ) | $(BIN_DIR)
-	@printf "  LD  %-24s\n" "$@"
-	@$(CC) $(CFLAGS) -I$(SRC_DIR) -o $@ $< $(OBJ)
+$(BIN_DIR)/%: $(TEST_DIR)/%.o $(LIB) $(FRAMEWORK)
+	@rm -f $@ && : > $(LOG_DIR)/$*.link.log
+	@if [ -f $< ] && [ -f $(OBJ_DIR)/$*.o ]; then \
+		$(CC) $(CFLAGS) $< $(FRAMEWORK) $(LIB) -o $@ 2> $(LOG_DIR)/$*.link.log \
+		|| printf "  $(RED)✗$(RESET) the %s test doesn't link\n" $*; \
+	fi
 
-list:
-	@printf "Available testers:\n"
-	@for t in $(VALID_NAMES); do printf "  %s\n" "$$t"; done
+-include $(wildcard $(OBJ_DIR)/*.d $(TEST_DIR)/*.d)
 
 clean:
-	@rm -rf $(BIN_DIR) $(OBJ_DIR)
+	@rm -rf $(BUILD)
 
-fclean: clean
-	@rm -f $(NAME)
-
-re: fclean all
+re: clean all
